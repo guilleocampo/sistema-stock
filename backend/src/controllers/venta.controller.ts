@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
+import { MetodoPago } from '@prisma/client';
 import * as ventaService from '../services/venta.service';
+
+const METODOS_PAGO_VALIDOS = Object.values(MetodoPago);
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +43,7 @@ function parsearFechaFin(valor: string): Date | null {
 
 export async function crear(req: Request, res: Response) {
   try {
-    const { items } = req.body;
+    const { items, metodoPago } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return badRequest(res, 'Se requiere un array "items" con al menos un producto');
@@ -52,7 +55,11 @@ export async function crear(req: Request, res: Response) {
       }
     }
 
-    const venta = await ventaService.registrarVenta(items);
+    if (!metodoPago || !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
+      return badRequest(res, `Se requiere "metodoPago". Valores válidos: ${METODOS_PAGO_VALIDOS.join(', ')}`);
+    }
+
+    const venta = await ventaService.registrarVenta(items, metodoPago);
 
     return res.status(201).json({
       data: venta,

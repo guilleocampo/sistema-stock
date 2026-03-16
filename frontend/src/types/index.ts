@@ -1,4 +1,5 @@
 export type Categoria = 'QUIOSCO' | 'LIBRERIA' | 'REGALERIA';
+export type MetodoPago = 'EFECTIVO' | 'TRANSFERENCIA' | 'DEBITO' | 'CREDITO';
 
 export interface Producto {
   id: number;
@@ -28,6 +29,7 @@ export interface Venta {
   id: number;
   fechaHora: string;
   total: string;
+  metodoPago: MetodoPago;
   items: ItemVenta[];
 }
 
@@ -52,6 +54,12 @@ export interface DesgloseCategoria {
   montoTotal: number;
 }
 
+export interface DesgloseMetodoPago {
+  metodoPago: MetodoPago;
+  cantidadTransacciones: number;
+  montoTotal: number;
+}
+
 export interface ResumenReporte {
   periodo: Periodo;
   desde: string;
@@ -62,6 +70,7 @@ export interface ResumenReporte {
   gananciaTotal: number;
   topProductos: TopProducto[];
   desgloseCategoria: DesgloseCategoria[];
+  desgloseMetodoPago: DesgloseMetodoPago[];
 }
 
 export interface ConfiguracionGanancia {

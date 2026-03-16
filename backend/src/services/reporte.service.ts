@@ -1,4 +1,4 @@
-import { Categoria } from '@prisma/client';
+import { Categoria, MetodoPago } from '@prisma/client';
 import prisma from '../lib/prisma';
 
 // ── Cálculo de rango de fechas según período ───────────────────────────────────
@@ -103,6 +103,22 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
     };
   });
 
+  // ── 4. Desglose por método de pago ────────────────────────────────────────
+
+  const ventasDelPeriodo = await prisma.venta.findMany({
+    where: { fechaHora: filtroFecha },
+    select: { total: true, metodoPago: true },
+  });
+
+  const desgloseMetodoPago = Object.values(MetodoPago).map((metodo) => {
+    const ventasMetodo = ventasDelPeriodo.filter((v) => v.metodoPago === metodo);
+    return {
+      metodoPago: metodo,
+      cantidadTransacciones: ventasMetodo.length,
+      montoTotal: Number(ventasMetodo.reduce((acc, v) => acc + Number(v.total), 0).toFixed(2)),
+    };
+  });
+
   return {
     periodo: periodoLabel,
     desde: desde.toISOString(),
@@ -113,6 +129,7 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
     gananciaTotal: Number(gananciaTotal.toFixed(2)),
     topProductos,
     desgloseCategoria,
+    desgloseMetodoPago,
   };
 }
 

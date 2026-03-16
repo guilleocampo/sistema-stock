@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Periodo, ResumenReporte, ProductoSinMovimiento, Categoria, HistorialPaginado, Venta } from '../types';
+import type { Periodo, ResumenReporte, ProductoSinMovimiento, Categoria, HistorialPaginado, Venta, MetodoPago } from '../types';
 import { API_URL } from '../services/api';
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
@@ -16,6 +16,28 @@ const CATEGORIA_INFO: Record<Categoria, { label: string; color: string; bg: stri
   LIBRERIA:  { label: 'Librería',  color: '#1e3a8a', bg: '#dbeafe', barra: '#3b82f6' },
   REGALERIA: { label: 'Regalería', color: '#6b21a8', bg: '#f3e8ff', barra: '#a855f7' },
 };
+
+const METODO_PAGO_INFO: Record<MetodoPago, { label: string; emoji: string; color: string; bg: string; border: string }> = {
+  EFECTIVO:      { label: 'Efectivo',      emoji: '💵', color: '#166534', bg: '#dcfce7', border: '#86efac' },
+  TRANSFERENCIA: { label: 'Transferencia', emoji: '📲', color: '#1e3a8a', bg: '#dbeafe', border: '#93c5fd' },
+  DEBITO:        { label: 'Débito',        emoji: '💳', color: '#92400e', bg: '#fff7ed', border: '#fdba74' },
+  CREDITO:       { label: 'Crédito',       emoji: '💳', color: '#5b21b6', bg: '#f3e8ff', border: '#c084fc' },
+};
+
+function BadgeMetodoPago({ metodo }: { metodo: MetodoPago }) {
+  const info = METODO_PAGO_INFO[metodo];
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      background: info.bg, color: info.color,
+      border: `1px solid ${info.border}`,
+      padding: '2px 8px', borderRadius: 20,
+      fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+    }}>
+      {info.emoji} {info.label}
+    </span>
+  );
+}
 
 function formatPrecio(valor: number) {
   return valor.toLocaleString('es-AR', { minimumFractionDigits: 2 });
@@ -102,7 +124,7 @@ function FilaVenta({ venta }: { venta: Venta }) {
         onClick={() => setExpandida(!expandida)}
         style={{
           display: 'grid',
-          gridTemplateColumns: '110px 70px 80px 1fr 110px 36px',
+          gridTemplateColumns: '110px 70px 80px 1fr 140px 110px 36px',
           alignItems: 'center',
           padding: '11px 20px',
           borderBottom: '1px solid var(--border)',
@@ -125,6 +147,9 @@ function FilaVenta({ venta }: { venta: Venta }) {
             {totalProductos} un.
           </span>
           {resumenProductos}
+        </div>
+        <div>
+          <BadgeMetodoPago metodo={venta.metodoPago} />
         </div>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--green)', textAlign: 'right' }}>
           ${formatPrecio(Number(venta.total))}
@@ -450,6 +475,45 @@ export default function Reportes() {
             />
           </div>
 
+          {/* ── Cards de método de pago ───────────────────────────────── */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+              Por método de pago
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {resumen?.desgloseMetodoPago.map((d) => {
+                const info = METODO_PAGO_INFO[d.metodoPago];
+                return (
+                  <div
+                    key={d.metodoPago}
+                    style={{
+                      flex: 1,
+                      background: 'white',
+                      border: `1.5px solid ${d.cantidadTransacciones > 0 ? info.border : 'var(--border)'}`,
+                      borderRadius: 12,
+                      padding: '16px 20px',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                      opacity: d.cantidadTransacciones === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 20 }}>{info.emoji}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: info.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {info.label}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: d.cantidadTransacciones > 0 ? info.color : 'var(--text-secondary)', lineHeight: 1, letterSpacing: '-0.5px' }}>
+                      ${formatPrecio(d.montoTotal)}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 5 }}>
+                      {d.cantidadTransacciones} transacción{d.cantidadTransacciones !== 1 ? 'es' : ''}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ── Fila: Top productos + Desglose categorías ─────────────── */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
 
@@ -606,16 +670,16 @@ export default function Reportes() {
                 {/* Cabecera tabla */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '110px 70px 80px 1fr 110px 36px',
+                  gridTemplateColumns: '110px 70px 80px 1fr 140px 110px 36px',
                   padding: '9px 20px',
                   background: '#f9fafb',
                   borderBottom: '1px solid var(--border)',
                 }}>
-                  {['Fecha', 'Hora', 'N° Venta', 'Productos', 'Total', ''].map((col, i) => (
+                  {['Fecha', 'Hora', 'N° Venta', 'Productos', 'Método de Pago', 'Total', ''].map((col, i) => (
                     <div key={i} style={{
                       fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
                       textTransform: 'uppercase', letterSpacing: '0.05em',
-                      textAlign: i === 4 ? 'right' : 'left',
+                      textAlign: i === 5 ? 'right' : 'left',
                     }}>
                       {col}
                     </div>

@@ -26,6 +26,13 @@ enum MotivoMovimiento {
   AJUSTE_MANUAL
 }
 
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  DEBITO
+  CREDITO
+}
+
 model Proveedor {
   id       Int        @id @default(autoincrement())
   nombre   String
@@ -60,10 +67,11 @@ model Producto {
 }
 
 model Venta {
-  id        Int         @id @default(autoincrement())
-  fechaHora DateTime    @default(now()) @map("fecha_hora")
-  total     Decimal     @db.Decimal(10, 2)
-  items     ItemVenta[]
+  id          Int         @id @default(autoincrement())
+  fechaHora   DateTime    @default(now()) @map("fecha_hora")
+  total       Decimal     @db.Decimal(10, 2)
+  metodoPago  MetodoPago  @map("metodo_pago")
+  items       ItemVenta[]
 
   @@map("ventas")
 }

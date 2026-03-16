@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Producto, ItemCarrito, Venta } from '../types';
+import type { Producto, ItemCarrito, Venta, MetodoPago } from '../types';
 import { API_URL } from '../services/api';
+
+// ── Método de pago ─────────────────────────────────────────────────────────────
+
+const METODOS_PAGO: { value: MetodoPago; label: string; emoji: string }[] = [
+  { value: 'EFECTIVO',      label: 'Efectivo',      emoji: '💵' },
+  { value: 'TRANSFERENCIA', label: 'Transferencia',  emoji: '📲' },
+  { value: 'DEBITO',        label: 'Débito',         emoji: '💳' },
+  { value: 'CREDITO',       label: 'Crédito',        emoji: '💳' },
+];
 
 // ── Helpers visuales ───────────────────────────────────────────────────────────
 
@@ -266,6 +275,7 @@ export default function NuevaVenta() {
   const [buscando, setBuscando] = useState(false);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
+  const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [mostrarResumen, setMostrarResumen] = useState(false);
   const [ventaExitosa, setVentaExitosa] = useState<Venta | null>(null);
@@ -349,7 +359,7 @@ export default function NuevaVenta() {
 
   const hayErroresStock = carrito.some((i) => i.cantidad > i.producto.stockActual);
   const carritoVacio = carrito.length === 0;
-  const puedeConfirmar = !carritoVacio && !hayErroresStock && !confirmando;
+  const puedeConfirmar = !carritoVacio && !hayErroresStock && !confirmando && metodoPago !== null;
 
   const confirmarVenta = async () => {
     if (!puedeConfirmar) return;
@@ -362,6 +372,7 @@ export default function NuevaVenta() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: carrito.map((i) => ({ productoId: i.producto.id, cantidad: i.cantidad })),
+          metodoPago,
         }),
       });
       const json = await res.json();
@@ -382,6 +393,7 @@ export default function NuevaVenta() {
   const iniciarNuevaVenta = () => {
     setVentaExitosa(null);
     setErrorServidor(null);
+    setMetodoPago(null);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
@@ -560,6 +572,53 @@ export default function NuevaVenta() {
           ))
         )}
 
+        {/* ── Selector de método de pago ────────────────────────────────────── */}
+        {!carritoVacio && (
+          <div
+            style={{
+              borderTop: '1px solid var(--border)',
+              padding: '16px 24px',
+              background: '#fafaf9',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+              Método de pago {metodoPago === null && <span style={{ color: 'var(--red)', marginLeft: 4 }}>— requerido</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {METODOS_PAGO.map(({ value, label, emoji }) => {
+                const seleccionado = metodoPago === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setMetodoPago(value)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 8px',
+                      border: `2px solid ${seleccionado ? 'var(--green)' : 'var(--border)'}`,
+                      borderRadius: 10,
+                      background: seleccionado ? '#f0fdf4' : 'white',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: seleccionado ? '#15803d' : 'var(--text-secondary)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 5,
+                      transition: 'all 0.15s',
+                      boxShadow: seleccionado ? '0 0 0 3px #dcfce7' : 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: 22 }}>{emoji}</span>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── Footer: error + total + botón ──────────────────────────────────── */}
         <div
           style={{
@@ -587,6 +646,18 @@ export default function NuevaVenta() {
                   <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
                 Hay productos sin stock suficiente. Ajustá las cantidades para continuar.
+              </div>
+            )}
+            {!hayErroresStock && !carritoVacio && metodoPago === null && (
+              <div
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: '#fff7ed', border: '1px solid #fed7aa',
+                  borderRadius: 8, padding: '8px 14px',
+                  color: '#92400e', fontSize: 13, fontWeight: 500,
+                }}
+              >
+                Seleccioná un método de pago para continuar.
               </div>
             )}
           </div>
@@ -713,7 +784,7 @@ export default function NuevaVenta() {
 
             {/* Footer: total + error + botones */}
             <div style={{ borderTop: '2px solid var(--border)', padding: '18px 28px' }}>
-              {/* Total */}
+              {/* Total + método de pago */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -722,6 +793,19 @@ export default function NuevaVenta() {
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
                     Total a cobrar
                   </div>
+                  {metodoPago && (
+                    <div style={{ marginTop: 6 }}>
+                      <span style={{
+                        fontSize: 12, fontWeight: 700,
+                        background: '#f0fdf4', color: '#15803d',
+                        border: '1px solid #86efac',
+                        padding: '3px 10px', borderRadius: 20,
+                      }}>
+                        {METODOS_PAGO.find((m) => m.value === metodoPago)?.emoji}{' '}
+                        {METODOS_PAGO.find((m) => m.value === metodoPago)?.label}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)' }}>
                   ${formatPrecio(total)}

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, MetodoPago } from '@prisma/client';
 import prisma from '../lib/prisma';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ export interface FiltrosVenta {
 
 // ── Registrar venta (transacción completa) ─────────────────────────────────────
 
-export async function registrarVenta(items: ItemInput[]) {
+export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago) {
   if (!items || items.length === 0) {
     throw new Error('La venta debe contener al menos un producto');
   }
@@ -72,7 +72,7 @@ export async function registrarVenta(items: ItemInput[]) {
     // ── Paso 3: crear registro en Venta ────────────────────────────────────────
 
     const venta = await tx.venta.create({
-      data: { total: new Prisma.Decimal(total) },
+      data: { total: new Prisma.Decimal(total), metodoPago },
     });
 
     // ── Paso 4: por cada item, crear ItemVenta + descontar stock + MovimientoStock
