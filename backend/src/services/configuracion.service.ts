@@ -136,3 +136,11 @@ export async function obtenerRecargoCreditoPorcentaje(): Promise<number> {
   });
   return config ? Number(config.porcentaje) : 0;
 }
+
+// Obtiene el % de recargo para TRANSFERENCIA
+export async function obtenerRecargoTransferenciaPorcentaje(): Promise<number> {
+  const config = await prisma.configuracionImpuesto.findFirst({
+    where: { tipo: 'POR_METODO_PAGO', metodoPago: 'TRANSFERENCIA', activo: true },
+  });
+  return config ? Number(config.porcentaje) : 0;
+}

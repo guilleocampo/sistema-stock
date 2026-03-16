@@ -40,6 +40,10 @@ export default function Configuracion() {
   const [guardandoCredito, setGuardandoCredito] = useState(false);
   const [exitoCredito, setExitoCredito] = useState('');
 
+  const [pctTransferencia, setPctTransferencia] = useState('0');
+  const [guardandoTransferencia, setGuardandoTransferencia] = useState(false);
+  const [exitoTransferencia, setExitoTransferencia] = useState('');
+
   // IVA defaults por categoría (almacenados como ConfiguracionImpuesto tipo POR_PRODUCTO)
   const [ivaDefaults, setIvaDefaults] = useState<Record<Categoria, { activo: boolean; porcentaje: string }>>({
     QUIOSCO:   { activo: false, porcentaje: '21' },
@@ -111,6 +115,10 @@ export default function Configuracion() {
       const credito = data.find((i) => i.tipo === 'POR_METODO_PAGO' && i.metodoPago === 'CREDITO');
       if (credito) setPctCredito(String(Number(credito.porcentaje)));
 
+      // Cargar recargo transferencia
+      const transferencia = data.find((i) => i.tipo === 'POR_METODO_PAGO' && i.metodoPago === 'TRANSFERENCIA');
+      if (transferencia) setPctTransferencia(String(Number(transferencia.porcentaje)));
+
       // Cargar defaults IVA por categoría
       const cats: Categoria[] = ['QUIOSCO', 'LIBRERIA', 'REGALERIA'];
       const nuevos = { ...ivaDefaults };
@@ -147,6 +155,32 @@ export default function Configuracion() {
       alert('Error al guardar');
     } finally {
       setGuardandoCredito(false);
+    }
+  }
+
+  async function guardarRecargoTransferencia() {
+    setGuardandoTransferencia(true);
+    try {
+      const existing = impuestos.find((i) => i.tipo === 'POR_METODO_PAGO' && i.metodoPago === 'TRANSFERENCIA');
+      const pct = parseFloat(pctTransferencia) || 0;
+      if (existing) {
+        await apiFetch(`/api/configuracion/impuestos/${existing.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ porcentaje: pct, activo: true }),
+        });
+      } else {
+        await apiFetch('/api/configuracion/impuestos', {
+          method: 'POST',
+          body: JSON.stringify({ nombre: 'Recargo Transferencia', porcentaje: pct, tipo: 'POR_METODO_PAGO', metodoPago: 'TRANSFERENCIA' }),
+        });
+      }
+      setExitoTransferencia('¡Guardado!');
+      setTimeout(() => setExitoTransferencia(''), 3000);
+      await cargarImpuestos();
+    } catch {
+      alert('Error al guardar');
+    } finally {
+      setGuardandoTransferencia(false);
     }
   }
 
@@ -507,6 +541,62 @@ export default function Configuracion() {
                 }}
               >
                 {guardandoCredito ? 'Guardando...' : 'Guardar recargo'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Card: Recargo por Transferencia */}
+        <div style={{
+          background: 'white', borderRadius: 14, border: '1.5px solid var(--border)',
+          overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: 20,
+        }}>
+          <div style={{
+            padding: '16px 20px', background: '#ecfdf5',
+            borderBottom: '2px solid #10b981',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <span style={{ fontSize: 24 }}>📲</span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#065f46' }}>Recargo por Transferencia</div>
+              <div style={{ fontSize: 11, color: '#059669', marginTop: 1 }}>Se aplica al total cuando el cliente paga por transferencia</div>
+            </div>
+          </div>
+          <div style={{ padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <input
+                type="number" min={0} max={100} step={0.5}
+                value={pctTransferencia}
+                onChange={(e) => setPctTransferencia(e.target.value)}
+                style={{
+                  width: 80, padding: '10px 12px',
+                  border: '2px solid #6ee7b7', borderRadius: 8,
+                  fontSize: 22, fontWeight: 800, fontFamily: 'inherit',
+                  color: '#065f46', background: '#ecfdf5', outline: 'none',
+                  textAlign: 'center',
+                }}
+              />
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#065f46' }}>%</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                Ej: con 5% sobre $100 → se cobra $105
+              </span>
+            </div>
+            {exitoTransferencia ? (
+              <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px', fontSize: 13, fontWeight: 600, color: '#15803d', textAlign: 'center' }}>
+                ✓ {exitoTransferencia}
+              </div>
+            ) : (
+              <button
+                onClick={guardarRecargoTransferencia}
+                disabled={guardandoTransferencia}
+                style={{
+                  padding: '10px 24px', background: '#10b981', color: 'white',
+                  border: 'none', borderRadius: 8, cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+                  opacity: guardandoTransferencia ? 0.6 : 1,
+                }}
+              >
+                {guardandoTransferencia ? 'Guardando...' : 'Guardar recargo'}
               </button>
             )}
           </div>

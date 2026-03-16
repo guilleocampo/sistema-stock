@@ -1,6 +1,6 @@
 import { Prisma, MetodoPago } from '@prisma/client';
 import prisma from '../lib/prisma';
-import { obtenerRecargoCreditoPorcentaje } from './configuracion.service';
+import { obtenerRecargoCreditoPorcentaje, obtenerRecargoTransferenciaPorcentaje } from './configuracion.service';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -79,11 +79,14 @@ export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago)
       return acc + Number(l.precioVenta) * l.cantidad * (Number(l.porcentajeIva) / 100);
     }, 0);
 
-    // 2c. Recargo por método de pago (solo CREDITO)
+    // 2c. Recargo por método de pago (CREDITO o TRANSFERENCIA)
     let impuestoMetodoPago = 0;
     if (metodoPago === 'CREDITO') {
       const pctCredito = await obtenerRecargoCreditoPorcentaje();
       impuestoMetodoPago = subtotalSinImpuestos * (pctCredito / 100);
+    } else if (metodoPago === 'TRANSFERENCIA') {
+      const pctTransferencia = await obtenerRecargoTransferenciaPorcentaje();
+      impuestoMetodoPago = subtotalSinImpuestos * (pctTransferencia / 100);
     }
 
     // 2d. Total final

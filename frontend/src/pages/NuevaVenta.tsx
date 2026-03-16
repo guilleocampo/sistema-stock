@@ -277,6 +277,7 @@ export default function NuevaVenta() {
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(null);
   const [pctRecargoCredito, setPctRecargoCredito] = useState(0);
+  const [pctRecargoTransferencia, setPctRecargoTransferencia] = useState(0);
   const [confirmando, setConfirmando] = useState(false);
   const [mostrarResumen, setMostrarResumen] = useState(false);
   const [ventaExitosa, setVentaExitosa] = useState<Venta | null>(null);
@@ -295,6 +296,11 @@ export default function NuevaVenta() {
           (i) => i.tipo === 'POR_METODO_PAGO' && i.metodoPago === 'CREDITO' && i.activo
         );
         if (credito) setPctRecargoCredito(Number(credito.porcentaje));
+
+        const transferencia = impuestos.find(
+          (i) => i.tipo === 'POR_METODO_PAGO' && i.metodoPago === 'TRANSFERENCIA' && i.activo
+        );
+        if (transferencia) setPctRecargoTransferencia(Number(transferencia.porcentaje));
       })
       .catch(() => {/* silencioso */});
   }, []);
@@ -379,7 +385,11 @@ export default function NuevaVenta() {
     ? subtotalSinImpuestos * (pctRecargoCredito / 100)
     : 0;
 
-  const total = subtotalSinImpuestos + ivaCalculado + recargoCredito;
+  const recargoTransferencia = metodoPago === 'TRANSFERENCIA'
+    ? subtotalSinImpuestos * (pctRecargoTransferencia / 100)
+    : 0;
+
+  const total = subtotalSinImpuestos + ivaCalculado + recargoCredito + recargoTransferencia;
 
   const hayErroresStock = carrito.some((i) => i.cantidad > i.producto.stockActual);
   const carritoVacio = carrito.length === 0;
@@ -691,10 +701,11 @@ export default function NuevaVenta() {
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 {carrito.reduce((a, i) => a + i.cantidad, 0)} unidad{carrito.reduce((a, i) => a + i.cantidad, 0) !== 1 ? 'es' : ''} · {carrito.length} producto{carrito.length !== 1 ? 's' : ''}
               </div>
-              {(ivaCalculado > 0 || recargoCredito > 0) && (
+              {(ivaCalculado > 0 || recargoCredito > 0 || recargoTransferencia > 0) && (
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                   {ivaCalculado > 0 && <span>IVA +${formatPrecio(ivaCalculado)}</span>}
                   {recargoCredito > 0 && <span style={{ marginLeft: 6 }}>Crédito +${formatPrecio(recargoCredito)}</span>}
+                  {recargoTransferencia > 0 && <span style={{ marginLeft: 6 }}>Transf. +${formatPrecio(recargoTransferencia)}</span>}
                 </div>
               )}
               <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 2 }}>
@@ -827,8 +838,14 @@ export default function NuevaVenta() {
                 )}
                 {recargoCredito > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderTop: '1px dashed var(--border)' }}>
-                    <span style={{ fontSize: 13, color: '#7c3aed' }}>Recargo tarjeta crédito ({pctRecargoCredito}%)</span>
+                    <span style={{ fontSize: 13, color: '#7c3aed' }}>Recargo crédito ({pctRecargoCredito}%)</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>+${formatPrecio(recargoCredito)}</span>
+                  </div>
+                )}
+                {recargoTransferencia > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderTop: '1px dashed var(--border)' }}>
+                    <span style={{ fontSize: 13, color: '#059669' }}>Recargo transf. ({pctRecargoTransferencia}%)</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#059669' }}>+${formatPrecio(recargoTransferencia)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, marginTop: 4, borderTop: '2px solid var(--border)' }}>
