@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Categoria {
+  QUIOSCO
+  LIBRERIA
+  REGALERIA
+}
+
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+enum MotivoMovimiento {
+  COMPRA
+  VENTA
+  DEVOLUCION
+  AJUSTE_MANUAL
+}
+
+model Proveedor {
+  id       Int        @id @default(autoincrement())
+  nombre   String
+  telefono String?
+  email    String?
+  notas    String?    @db.Text
+  activo   Boolean    @default(true)
+  creadoEn DateTime   @default(now()) @map("creado_en")
+  productos Producto[]
+
+  @@map("proveedores")
+}
+
+model Producto {
+  id            Int               @id @default(autoincrement())
+  sku           String            @unique
+  nombre        String
+  categoria     Categoria
+  precioCompra  Decimal           @map("precio_compra") @db.Decimal(10, 2)
+  precioVenta   Decimal           @map("precio_venta") @db.Decimal(10, 2)
+  stockActual   Int               @default(0) @map("stock_actual")
+  stockMinimo   Int               @default(5) @map("stock_minimo")
+  activo        Boolean           @default(true)
+  creadoEn      DateTime          @default(now()) @map("creado_en")
+  actualizadoEn DateTime          @updatedAt @map("actualizado_en")
+  proveedorId   Int?              @map("proveedor_id")
+  proveedor     Proveedor?        @relation(fields: [proveedorId], references: [id])
+  itemsVenta    ItemVenta[]
+  movimientos   MovimientoStock[]
+
+  @@map("productos")
+}
+
+model Venta {
+  id        Int         @id @default(autoincrement())
+  fechaHora DateTime    @default(now()) @map("fecha_hora")
+  total     Decimal     @db.Decimal(10, 2)
+  items     ItemVenta[]
+
+  @@map("ventas")
+}
+
+model ItemVenta {
+  id             Int      @id @default(autoincrement())
+  ventaId        Int      @map("venta_id")
+  productoId     Int      @map("producto_id")
+  cantidad       Int
+  precioUnitario Decimal  @map("precio_unitario") @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
+  venta          Venta    @relation(fields: [ventaId], references: [id])
+  producto       Producto @relation(fields: [productoId], references: [id])
+
+  @@map("items_venta")
+}
+
+model MovimientoStock {
+  id           Int              @id @default(autoincrement())
+  productoId   Int              @map("producto_id")
+  tipo         TipoMovimiento
+  cantidad     Int
+  motivo       MotivoMovimiento
+  fechaHora    DateTime         @default(now()) @map("fecha_hora")
+  referenciaId Int?             @map("referencia_id")
+  producto     Producto         @relation(fields: [productoId], references: [id])
+
+  @@map("movimientos_stock")
+}
+
+model ConfiguracionGanancia {
+  id            Int       @id @default(autoincrement())
+  categoria     Categoria @unique
+  porcentaje    Decimal   @default(0) @db.Decimal(5, 2)
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+
+  @@map("configuracion_ganancia")
+}

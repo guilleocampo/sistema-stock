@@ -1,0 +1,37 @@
+# Comando: Bajo Stock
+
+Mostrá todos los productos que necesitan reposición urgente.
+
+## Qué mostrar
+
+### Productos críticos (stock_actual = 0)
+- Nombre, SKU, categoría
+- Proveedor asignado con teléfono de contacto
+- Última fecha de venta
+
+### Productos en alerta (stock_actual <= stock_minimo)
+- Nombre, SKU, categoría
+- Stock actual vs stock mínimo configurado
+- Proveedor asignado
+- Días desde la última venta
+
+### Productos próximos a agotarse (stock_actual <= stock_minimo * 1.5)
+- Vista preventiva para anticipar pedidos
+
+## Acciones disponibles después del reporte
+Preguntar al usuario qué quiere hacer:
+1. **Registrar entrada de stock** — para uno o varios productos de la lista
+2. **Ver historial de movimientos** — de un producto específico
+3. **Contactar proveedor** — mostrar datos de contacto del proveedor
+4. **Ajustar stock mínimo** — cambiar el umbral de alerta de un producto
+
+## Generá el código para
+- Query Prisma: `WHERE stock_actual <= stock_minimo`
+- Incluir JOIN con Proveedor para mostrar contacto
+- Incluir última fecha de venta desde tabla `ItemVenta`
+- Endpoint GET `/api/productos/bajo-stock`
+- Ordenar por criticidad: primero los que tienen stock 0
+
+## Contexto
+- Este reporte se va a usar al inicio del día para planificar pedidos
+- Los productos sin proveedor asignado deben marcarse como "Sin proveedor"
