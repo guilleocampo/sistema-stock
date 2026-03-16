@@ -1,5 +1,6 @@
 import { Prisma, MetodoPago } from '@prisma/client';
 import prisma from '../lib/prisma';
+import { obtenerRecargoCreditoPorcentaje } from './configuracion.service';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,7 @@ export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago)
     // ── Paso 1: validar stock de TODOS los items antes de procesar ─────────────
 
     const errores: string[] = [];
-    const lineas: { productoId: number; nombre: string; cantidad: number; precioVenta: Prisma.Decimal }[] = [];
+    const lineas: { productoId: number; nombre: string; cantidad: number; precioVenta: Prisma.Decimal; tieneIva: boolean; porcentajeIva: Prisma.Decimal }[] = [];
 
     for (const item of items) {
       if (!Number.isInteger(item.cantidad) || item.cantidad <= 0) {
@@ -35,7 +36,7 @@ export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago)
 
       const producto = await tx.producto.findFirst({
         where: { id: item.productoId, activo: true },
-        select: { id: true, nombre: true, stockActual: true, precioVenta: true },
+        select: { id: true, nombre: true, stockActual: true, precioVenta: true, tieneIva: true, porcentajeIva: true },
       });
 
       if (!producto) {
@@ -55,6 +56,8 @@ export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago)
         nombre: producto.nombre,
         cantidad: item.cantidad,
         precioVenta: producto.precioVenta,
+        tieneIva: producto.tieneIva,
+        porcentajeIva: producto.porcentajeIva,
       });
     }
 
@@ -63,16 +66,39 @@ export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago)
       throw new Error(errores.join(' | '));
     }
 
-    // ── Paso 2: calcular total ─────────────────────────────────────────────────
+    // ── Paso 2: calcular impuestos ─────────────────────────────────────────────
 
-    const total = lineas.reduce((acc, linea) => {
-      return acc + Number(linea.precioVenta) * linea.cantidad;
+    // 2a. Subtotal sin impuestos
+    const subtotalSinImpuestos = lineas.reduce(
+      (acc, l) => acc + Number(l.precioVenta) * l.cantidad, 0
+    );
+
+    // 2b. IVA: solo de productos con tieneIva = true
+    const impuestoIva = lineas.reduce((acc, l) => {
+      if (!l.tieneIva) return acc;
+      return acc + Number(l.precioVenta) * l.cantidad * (Number(l.porcentajeIva) / 100);
     }, 0);
+
+    // 2c. Recargo por método de pago (solo CREDITO)
+    let impuestoMetodoPago = 0;
+    if (metodoPago === 'CREDITO') {
+      const pctCredito = await obtenerRecargoCreditoPorcentaje();
+      impuestoMetodoPago = subtotalSinImpuestos * (pctCredito / 100);
+    }
+
+    // 2d. Total final
+    const total = subtotalSinImpuestos + impuestoIva + impuestoMetodoPago;
 
     // ── Paso 3: crear registro en Venta ────────────────────────────────────────
 
     const venta = await tx.venta.create({
-      data: { total: new Prisma.Decimal(total), metodoPago },
+      data: {
+        subtotalSinImpuestos: new Prisma.Decimal(subtotalSinImpuestos.toFixed(2)),
+        impuestoIva: new Prisma.Decimal(impuestoIva.toFixed(2)),
+        impuestoMetodoPago: new Prisma.Decimal(impuestoMetodoPago.toFixed(2)),
+        total: new Prisma.Decimal(total.toFixed(2)),
+        metodoPago,
+      },
     });
 
     // ── Paso 4: por cada item, crear ItemVenta + descontar stock + MovimientoStock

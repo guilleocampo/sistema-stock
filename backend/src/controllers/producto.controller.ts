@@ -58,7 +58,7 @@ export async function obtenerPorId(req: Request, res: Response) {
 
 export async function crear(req: Request, res: Response) {
   try {
-    const { nombre, categoria, precioCompra, precioVenta, stockActual, stockMinimo, proveedorId } = req.body;
+    const { nombre, categoria, precioCompra, precioVenta, stockActual, stockMinimo, proveedorId, tieneIva, porcentajeIva } = req.body;
 
     if (!nombre || typeof nombre !== 'string' || nombre.trim() === '') {
       return badRequest(res, 'El nombre es obligatorio');
@@ -81,6 +81,8 @@ export async function crear(req: Request, res: Response) {
       stockActual: stockActual !== undefined ? Number(stockActual) : undefined,
       stockMinimo: stockMinimo !== undefined ? Number(stockMinimo) : undefined,
       proveedorId: proveedorId ? Number(proveedorId) : undefined,
+      tieneIva: tieneIva === true || tieneIva === 'true',
+      porcentajeIva: porcentajeIva !== undefined ? Number(porcentajeIva) : undefined,
     });
 
     return res.status(201).json({ data: producto, error: null, message: 'Producto creado correctamente' });
@@ -100,7 +102,7 @@ export async function editar(req: Request, res: Response) {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return badRequest(res, 'ID inválido');
 
-    const { nombre, categoria, precioCompra, precioVenta, stockActual, stockMinimo, proveedorId } = req.body;
+    const { nombre, categoria, precioCompra, precioVenta, stockActual, stockMinimo, proveedorId, tieneIva, porcentajeIva } = req.body;
 
     if (categoria !== undefined && !Object.values(Categoria).includes(categoria)) {
       return badRequest(res, `Categoría inválida. Valores válidos: ${Object.values(Categoria).join(', ')}`);
@@ -120,6 +122,8 @@ export async function editar(req: Request, res: Response) {
     if (stockActual !== undefined) datos.stockActual = Number(stockActual);
     if (stockMinimo !== undefined) datos.stockMinimo = Number(stockMinimo);
     if ('proveedorId' in req.body) datos.proveedorId = proveedorId ? Number(proveedorId) : null;
+    if (tieneIva !== undefined) datos.tieneIva = tieneIva === true || tieneIva === 'true';
+    if (porcentajeIva !== undefined) datos.porcentajeIva = Number(porcentajeIva);
 
     const producto = await productoService.editarProducto(id, datos);
     if (!producto) return notFound(res);

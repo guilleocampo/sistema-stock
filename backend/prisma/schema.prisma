@@ -33,6 +33,11 @@ enum MetodoPago {
   CREDITO
 }
 
+enum TipoImpuesto {
+  POR_METODO_PAGO
+  POR_PRODUCTO
+}
+
 model Proveedor {
   id       Int        @id @default(autoincrement())
   nombre   String
@@ -55,6 +60,8 @@ model Producto {
   precioVenta   Decimal           @map("precio_venta") @db.Decimal(10, 2)
   stockActual   Int               @default(0) @map("stock_actual")
   stockMinimo   Int               @default(5) @map("stock_minimo")
+  tieneIva      Boolean           @default(false) @map("tiene_iva")
+  porcentajeIva Decimal           @default(21.0) @map("porcentaje_iva") @db.Decimal(5, 2)
   activo        Boolean           @default(true)
   creadoEn      DateTime          @default(now()) @map("creado_en")
   actualizadoEn DateTime          @updatedAt @map("actualizado_en")
@@ -67,11 +74,14 @@ model Producto {
 }
 
 model Venta {
-  id          Int         @id @default(autoincrement())
-  fechaHora   DateTime    @default(now()) @map("fecha_hora")
-  total       Decimal     @db.Decimal(10, 2)
-  metodoPago  MetodoPago  @map("metodo_pago")
-  items       ItemVenta[]
+  id                     Int         @id @default(autoincrement())
+  fechaHora              DateTime    @default(now()) @map("fecha_hora")
+  subtotalSinImpuestos   Decimal     @map("subtotal_sin_impuestos") @db.Decimal(10, 2)
+  impuestoIva            Decimal     @default(0) @map("impuesto_iva") @db.Decimal(10, 2)
+  impuestoMetodoPago     Decimal     @default(0) @map("impuesto_metodo_pago") @db.Decimal(10, 2)
+  total                  Decimal     @db.Decimal(10, 2)
+  metodoPago             MetodoPago  @map("metodo_pago")
+  items                  ItemVenta[]
 
   @@map("ventas")
 }
@@ -109,4 +119,16 @@ model ConfiguracionGanancia {
   actualizadoEn DateTime  @updatedAt @map("actualizado_en")
 
   @@map("configuracion_ganancia")
+}
+
+model ConfiguracionImpuesto {
+  id            Int          @id @default(autoincrement())
+  nombre        String
+  porcentaje    Decimal      @db.Decimal(5, 2)
+  tipo          TipoImpuesto
+  metodoPago    MetodoPago?  @map("metodo_pago")
+  activo        Boolean      @default(true)
+  actualizadoEn DateTime     @updatedAt @map("actualizado_en")
+
+  @@map("configuracion_impuesto")
 }

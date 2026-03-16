@@ -35,6 +35,8 @@ export interface DatosCrearProducto {
   stockActual?: number;
   stockMinimo?: number;
   proveedorId?: number;
+  tieneIva?: boolean;
+  porcentajeIva?: number;
 }
 
 export interface DatosEditarProducto {
@@ -45,6 +47,8 @@ export interface DatosEditarProducto {
   stockActual?: number;
   stockMinimo?: number;
   proveedorId?: number | null;
+  tieneIva?: boolean;
+  porcentajeIva?: number;
 }
 
 // ── Validaciones ───────────────────────────────────────────────────────────────
@@ -115,6 +119,8 @@ export async function crearProducto(datos: DatosCrearProducto) {
       stockActual: datos.stockActual ?? 0,
       stockMinimo: datos.stockMinimo ?? 5,
       proveedorId: datos.proveedorId ?? null,
+      tieneIva: datos.tieneIva ?? false,
+      porcentajeIva: new Prisma.Decimal(datos.porcentajeIva ?? 21.0),
     },
     include: { proveedor: { select: { id: true, nombre: true } } },
   });
@@ -149,6 +155,8 @@ export async function editarProducto(id: number, datos: DatosEditarProducto) {
     if (datos.precioVenta !== undefined) updateData.precioVenta = new Prisma.Decimal(datos.precioVenta);
     if (datos.stockMinimo !== undefined) updateData.stockMinimo = datos.stockMinimo;
     if (datos.stockActual !== undefined) updateData.stockActual = datos.stockActual;
+    if (datos.tieneIva !== undefined) updateData.tieneIva = datos.tieneIva;
+    if (datos.porcentajeIva !== undefined) updateData.porcentajeIva = new Prisma.Decimal(datos.porcentajeIva);
     if ('proveedorId' in datos) {
       updateData.proveedor = datos.proveedorId
         ? { connect: { id: datos.proveedorId } }

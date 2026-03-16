@@ -12,6 +12,8 @@ interface FormData {
   stockActual: string;
   stockMinimo: string;
   proveedorId: string;
+  tieneIva: boolean;
+  porcentajeIva: string;
 }
 
 interface FormErrors {
@@ -38,6 +40,7 @@ const CATEGORIAS: { value: Categoria; label: string }[] = [
 const VACIO: FormData = {
   nombre: '', categoria: '', precioCompra: '',
   precioVenta: '', stockActual: '0', stockMinimo: '5', proveedorId: '',
+  tieneIva: false, porcentajeIva: '21',
 };
 
 function Field({
@@ -89,6 +92,8 @@ export default function ProductoModal({ producto, onGuardar, onCerrar }: Props) 
         stockActual: String(producto.stockActual),
         stockMinimo: String(producto.stockMinimo),
         proveedorId: producto.proveedorId ? String(producto.proveedorId) : '',
+        tieneIva: producto.tieneIva,
+        porcentajeIva: String(Number(producto.porcentajeIva)),
       });
     } else {
       setForm(VACIO);
@@ -152,13 +157,11 @@ export default function ProductoModal({ producto, onGuardar, onCerrar }: Props) 
       precioVenta: Number(form.precioVenta),
       stockMinimo: Number(form.stockMinimo),
       proveedorId: form.proveedorId ? Number(form.proveedorId) : null,
+      tieneIva: form.tieneIva,
+      porcentajeIva: form.tieneIva ? Number(form.porcentajeIva) : 21,
     };
 
-    if (!esEdicion) {
-      datos.stockActual = Number(form.stockActual);
-    } else {
-      datos.stockActual = Number(form.stockActual);
-    }
+    datos.stockActual = Number(form.stockActual);
 
     try {
       await onGuardar(datos);
@@ -295,6 +298,67 @@ export default function ProductoModal({ producto, onGuardar, onCerrar }: Props) 
                   Se mostrará alerta cuando el stock baje de este número
                 </span>
               </Field>
+            </div>
+
+            {/* IVA */}
+            <div style={{
+              border: `1.5px solid ${form.tieneIva ? '#86efac' : 'var(--border)'}`,
+              borderRadius: 10,
+              padding: '14px 16px',
+              background: form.tieneIva ? '#f0fdf4' : '#f9fafb',
+              transition: 'all 0.15s',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: form.tieneIva ? 12 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    ¿Producto gravado con IVA?
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                    Se sumará al precio de venta al registrar una venta
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, tieneIva: !prev.tieneIva }))}
+                  style={{
+                    width: 44, height: 24, borderRadius: 12, border: 'none',
+                    background: form.tieneIva ? 'var(--green)' : '#d1d5db',
+                    cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3,
+                    left: form.tieneIva ? 22 : 4,
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: 'white', transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </button>
+              </div>
+              {form.tieneIva && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={form.porcentajeIva}
+                    onChange={(e) => setForm((prev) => ({ ...prev, porcentajeIva: e.target.value }))}
+                    style={{
+                      ...inputStyle(),
+                      width: 80,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      textAlign: 'center',
+                    }}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#16a34a' }}>% IVA</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    (default: 21%)
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Proveedor */}

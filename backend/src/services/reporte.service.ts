@@ -107,7 +107,7 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
 
   const ventasDelPeriodo = await prisma.venta.findMany({
     where: { fechaHora: filtroFecha },
-    select: { total: true, metodoPago: true },
+    select: { total: true, metodoPago: true, subtotalSinImpuestos: true, impuestoIva: true, impuestoMetodoPago: true },
   });
 
   const desgloseMetodoPago = Object.values(MetodoPago).map((metodo) => {
@@ -118,6 +118,18 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
       montoTotal: Number(ventasMetodo.reduce((acc, v) => acc + Number(v.total), 0).toFixed(2)),
     };
   });
+
+  // ── 5. Impuestos del período ────────────────────────────────────────────────
+
+  const totalIva = Number(
+    ventasDelPeriodo.reduce((acc, v) => acc + Number(v.impuestoIva), 0).toFixed(2)
+  );
+  const totalRecargosMetodoPago = Number(
+    ventasDelPeriodo.reduce((acc, v) => acc + Number(v.impuestoMetodoPago), 0).toFixed(2)
+  );
+  const totalSinImpuestos = Number(
+    ventasDelPeriodo.reduce((acc, v) => acc + Number(v.subtotalSinImpuestos), 0).toFixed(2)
+  );
 
   return {
     periodo: periodoLabel,
@@ -130,6 +142,9 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
     topProductos,
     desgloseCategoria,
     desgloseMetodoPago,
+    totalIva,
+    totalRecargosMetodoPago,
+    totalSinImpuestos,
   };
 }
 

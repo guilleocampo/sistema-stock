@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Producto, ItemCarrito, Venta, MetodoPago } from '../types';
+import type { Producto, ItemCarrito, Venta, MetodoPago, ConfiguracionImpuesto } from '../types';
 import { API_URL } from '../services/api';
 
 // ── Método de pago ─────────────────────────────────────────────────────────────
@@ -276,6 +276,7 @@ export default function NuevaVenta() {
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(null);
+  const [pctRecargoCredito, setPctRecargoCredito] = useState(0);
   const [confirmando, setConfirmando] = useState(false);
   const [mostrarResumen, setMostrarResumen] = useState(false);
   const [ventaExitosa, setVentaExitosa] = useState<Venta | null>(null);
@@ -284,6 +285,20 @@ export default function NuevaVenta() {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timerBusqueda = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cargar % recargo crédito al montar
+  useEffect(() => {
+    fetch(`${API_URL}/api/configuracion/impuestos`)
+      .then((r) => r.json())
+      .then((json) => {
+        const impuestos: ConfiguracionImpuesto[] = json.data ?? [];
+        const credito = impuestos.find(
+          (i) => i.tipo === 'POR_METODO_PAGO' && i.metodoPago === 'CREDITO' && i.activo
+        );
+        if (credito) setPctRecargoCredito(Number(credito.porcentaje));
+      })
+      .catch(() => {/* silencioso */});
+  }, []);
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
@@ -352,10 +367,21 @@ export default function NuevaVenta() {
     setErrorServidor(null);
   };
 
-  const total = carrito.reduce(
+  const subtotalSinImpuestos = carrito.reduce(
     (acc, item) => acc + Number(item.producto.precioVenta) * item.cantidad,
     0
   );
+
+  const ivaCalculado = carrito.reduce((acc, item) => {
+    if (!item.producto.tieneIva) return acc;
+    return acc + Number(item.producto.precioVenta) * item.cantidad * (Number(item.producto.porcentajeIva) / 100);
+  }, 0);
+
+  const recargoCredito = metodoPago === 'CREDITO'
+    ? subtotalSinImpuestos * (pctRecargoCredito / 100)
+    : 0;
+
+  const total = subtotalSinImpuestos + ivaCalculado + recargoCredito;
 
   const hayErroresStock = carrito.some((i) => i.cantidad > i.producto.stockActual);
   const carritoVacio = carrito.length === 0;
@@ -490,6 +516,11 @@ export default function NuevaVenta() {
                         <span style={{ background: badge.bg, color: badge.color, padding: '1px 7px', borderRadius: 20, fontSize: 11, fontWeight: 500 }}>
                           {badge.label}
                         </span>
+                        {producto.tieneIva && (
+                          <span style={{ background: '#fef9c3', color: '#854d0e', padding: '1px 7px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                            IVA {Number(producto.porcentajeIva)}%
+                          </span>
+                        )}
                         {enCarrito && (
                           <span style={{ background: '#dcfce7', color: '#166534', padding: '1px 7px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
                             ✓ En carrito
@@ -662,12 +693,18 @@ export default function NuevaVenta() {
             )}
           </div>
 
-          {/* Cantidad de items */}
+          {/* Cantidad de items + total */}
           {!carritoVacio && (
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 {carrito.reduce((a, i) => a + i.cantidad, 0)} unidad{carrito.reduce((a, i) => a + i.cantidad, 0) !== 1 ? 'es' : ''} · {carrito.length} producto{carrito.length !== 1 ? 's' : ''}
               </div>
+              {(ivaCalculado > 0 || recargoCredito > 0) && (
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {ivaCalculado > 0 && <span>IVA +${formatPrecio(ivaCalculado)}</span>}
+                  {recargoCredito > 0 && <span style={{ marginLeft: 6 }}>Crédito +${formatPrecio(recargoCredito)}</span>}
+                </div>
+              )}
               <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 2 }}>
                 ${formatPrecio(total)}
               </div>
@@ -784,31 +821,34 @@ export default function NuevaVenta() {
 
             {/* Footer: total + error + botones */}
             <div style={{ borderTop: '2px solid var(--border)', padding: '18px 28px' }}>
-              {/* Total + método de pago */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    {carrito.reduce((a, i) => a + i.cantidad, 0)} unidades · {carrito.length} producto{carrito.length !== 1 ? 's' : ''}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
-                    Total a cobrar
-                  </div>
-                  {metodoPago && (
-                    <div style={{ marginTop: 6 }}>
-                      <span style={{
-                        fontSize: 12, fontWeight: 700,
-                        background: '#f0fdf4', color: '#15803d',
-                        border: '1px solid #86efac',
-                        padding: '3px 10px', borderRadius: 20,
-                      }}>
-                        {METODOS_PAGO.find((m) => m.value === metodoPago)?.emoji}{' '}
-                        {METODOS_PAGO.find((m) => m.value === metodoPago)?.label}
-                      </span>
-                    </div>
-                  )}
+                      {/* Desglose de importes */}
+              <div style={{ background: '#f9fafb', borderRadius: 10, padding: '12px 16px', marginBottom: 16, border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Subtotal</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>${formatPrecio(subtotalSinImpuestos)}</span>
                 </div>
-                <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  ${formatPrecio(total)}
+                {ivaCalculado > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderTop: '1px dashed var(--border)' }}>
+                    <span style={{ fontSize: 13, color: '#16a34a' }}>IVA (productos gravados)</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>+${formatPrecio(ivaCalculado)}</span>
+                  </div>
+                )}
+                {recargoCredito > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderTop: '1px dashed var(--border)' }}>
+                    <span style={{ fontSize: 13, color: '#7c3aed' }}>Recargo tarjeta crédito ({pctRecargoCredito}%)</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>+${formatPrecio(recargoCredito)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, marginTop: 4, borderTop: '2px solid var(--border)' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    TOTAL
+                    {metodoPago && (
+                      <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', padding: '2px 8px', borderRadius: 20 }}>
+                        {METODOS_PAGO.find((m) => m.value === metodoPago)?.emoji} {METODOS_PAGO.find((m) => m.value === metodoPago)?.label}
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>${formatPrecio(total)}</span>
                 </div>
               </div>
 

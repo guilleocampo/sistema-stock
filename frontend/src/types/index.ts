@@ -1,5 +1,6 @@
 export type Categoria = 'QUIOSCO' | 'LIBRERIA' | 'REGALERIA';
 export type MetodoPago = 'EFECTIVO' | 'TRANSFERENCIA' | 'DEBITO' | 'CREDITO';
+export type TipoImpuesto = 'POR_METODO_PAGO' | 'POR_PRODUCTO';
 
 export interface Producto {
   id: number;
@@ -10,6 +11,8 @@ export interface Producto {
   precioVenta: string;
   stockActual: number;
   stockMinimo: number;
+  tieneIva: boolean;
+  porcentajeIva: string;
   activo: boolean;
   proveedorId: number | null;
   proveedor: { id: number; nombre: string } | null;
@@ -28,9 +31,22 @@ export interface ItemVenta {
 export interface Venta {
   id: number;
   fechaHora: string;
+  subtotalSinImpuestos: string;
+  impuestoIva: string;
+  impuestoMetodoPago: string;
   total: string;
   metodoPago: MetodoPago;
   items: ItemVenta[];
+}
+
+export interface ConfiguracionImpuesto {
+  id: number;
+  nombre: string;
+  porcentaje: string;
+  tipo: TipoImpuesto;
+  metodoPago: MetodoPago | null;
+  activo: boolean;
+  actualizadoEn: string;
 }
 
 export interface ItemCarrito {
@@ -71,6 +87,9 @@ export interface ResumenReporte {
   topProductos: TopProducto[];
   desgloseCategoria: DesgloseCategoria[];
   desgloseMetodoPago: DesgloseMetodoPago[];
+  totalIva: number;
+  totalRecargosMetodoPago: number;
+  totalSinImpuestos: number;
 }
 
 export interface ConfiguracionGanancia {

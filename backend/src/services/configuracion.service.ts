@@ -1,4 +1,4 @@
-import { Categoria, Prisma } from '@prisma/client';
+import { Categoria, MetodoPago, TipoImpuesto, Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 
 const CATEGORIAS: Categoria[] = ['QUIOSCO', 'LIBRERIA', 'REGALERIA'];
@@ -76,4 +76,63 @@ export async function actualizarGanancia(categoria: Categoria, porcentaje: numbe
     porcentaje,
     productosActualizados: productos.length,
   };
+}
+
+// ── Impuestos ──────────────────────────────────────────────────────────────────
+
+export interface DatosImpuesto {
+  nombre: string;
+  porcentaje: number;
+  tipo: TipoImpuesto;
+  metodoPago?: MetodoPago | null;
+}
+
+export async function listarImpuestos() {
+  return prisma.configuracionImpuesto.findMany({
+    orderBy: [{ tipo: 'asc' }, { nombre: 'asc' }],
+  });
+}
+
+export async function crearImpuesto(datos: DatosImpuesto) {
+  return prisma.configuracionImpuesto.create({
+    data: {
+      nombre: datos.nombre,
+      porcentaje: new Prisma.Decimal(datos.porcentaje),
+      tipo: datos.tipo,
+      metodoPago: datos.metodoPago ?? null,
+    },
+  });
+}
+
+export async function editarImpuesto(id: number, datos: Partial<DatosImpuesto> & { activo?: boolean }) {
+  const impuesto = await prisma.configuracionImpuesto.findUnique({ where: { id } });
+  if (!impuesto) return null;
+
+  return prisma.configuracionImpuesto.update({
+    where: { id },
+    data: {
+      ...(datos.nombre !== undefined && { nombre: datos.nombre }),
+      ...(datos.porcentaje !== undefined && { porcentaje: new Prisma.Decimal(datos.porcentaje) }),
+      ...(datos.tipo !== undefined && { tipo: datos.tipo }),
+      ...('metodoPago' in datos && { metodoPago: datos.metodoPago ?? null }),
+      ...(datos.activo !== undefined && { activo: datos.activo }),
+    },
+  });
+}
+
+export async function bajaLogicaImpuesto(id: number) {
+  const impuesto = await prisma.configuracionImpuesto.findUnique({ where: { id } });
+  if (!impuesto) return null;
+  return prisma.configuracionImpuesto.update({
+    where: { id },
+    data: { activo: false },
+  });
+}
+
+// Obtiene el % de recargo para CRÉDITO (busca el primero activo de tipo POR_METODO_PAGO y CREDITO)
+export async function obtenerRecargoCreditoPorcentaje(): Promise<number> {
+  const config = await prisma.configuracionImpuesto.findFirst({
+    where: { tipo: 'POR_METODO_PAGO', metodoPago: 'CREDITO', activo: true },
+  });
+  return config ? Number(config.porcentaje) : 0;
 }

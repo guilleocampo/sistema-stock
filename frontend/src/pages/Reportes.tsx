@@ -220,7 +220,7 @@ function FilaVenta({ venta }: { venta: Venta }) {
               </div>
             );
           })}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, marginTop: 10, paddingTop: 8, borderTop: '2px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, marginTop: 10, paddingTop: 8, borderTop: '2px solid var(--border)', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>
               Ganancia: ${formatPrecio(
                 venta.items.reduce((acc, item) =>
@@ -228,6 +228,16 @@ function FilaVenta({ venta }: { venta: Venta }) {
                 )
               )}
             </span>
+            {Number(venta.impuestoIva) > 0 && (
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
+                IVA: ${formatPrecio(Number(venta.impuestoIva))}
+              </span>
+            )}
+            {Number(venta.impuestoMetodoPago) > 0 && (
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>
+                Recargo: ${formatPrecio(Number(venta.impuestoMetodoPago))}
+              </span>
+            )}
             <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--green)' }}>
               Total: ${formatPrecio(Number(venta.total))}
             </span>
@@ -474,6 +484,44 @@ export default function Reportes() {
               sub="Por venta"
             />
           </div>
+
+          {/* ── Cards de impuestos recaudados ────────────────────────── */}
+          {resumen && !sinVentas && (resumen.totalIva > 0 || resumen.totalRecargosMetodoPago > 0) && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                Impuestos recaudados
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1, background: 'white', borderRadius: 12, border: '1.5px solid #86efac', padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 16 }}>🧾</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>IVA recaudado</span>
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#16a34a', letterSpacing: '-0.5px' }}>
+                    ${formatPrecio(resumen.totalIva)}
+                  </div>
+                </div>
+                <div style={{ flex: 1, background: 'white', borderRadius: 12, border: '1.5px solid #c084fc', padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 16 }}>💳</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#5b21b6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recargos tarjeta</span>
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#7c3aed', letterSpacing: '-0.5px' }}>
+                    ${formatPrecio(resumen.totalRecargosMetodoPago)}
+                  </div>
+                </div>
+                <div style={{ flex: 1, background: 'white', borderRadius: 12, border: '1.5px solid var(--border)', padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 16 }}>💰</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total sin impuestos</span>
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
+                    ${formatPrecio(resumen.totalSinImpuestos)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Cards de método de pago ───────────────────────────────── */}
           <div style={{ marginBottom: 24 }}>
