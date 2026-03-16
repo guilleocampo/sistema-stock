@@ -62,7 +62,11 @@ export async function resumen(req: Request, res: Response) {
       );
     }
 
+    // DEBUG: ver parámetros recibidos y rango calculado (remover cuando funcione)
+    console.log('[reporte] periodo:', periodoLabel, '| desde:', fechaDesde.toISOString(), '| hasta:', fechaHasta.toISOString());
+
     const data = await reporteService.obtenerResumen(fechaDesde, fechaHasta, periodoLabel);
+    console.log('[reporte] cantidadVentas:', data.cantidadVentas, '| totalRecaudado:', data.totalRecaudado);
     return res.json({ data, error: null, message: 'OK' });
   } catch (err) {
     return serverError(res, err);

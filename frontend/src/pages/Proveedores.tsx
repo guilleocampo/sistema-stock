@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { API_URL } from '../services/api';
+import { apiFetch } from '../services/api';
 import ProveedorModal from '../components/proveedores/ProveedorModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import type { Producto, Categoria } from '../types';
@@ -103,8 +103,7 @@ export default function Proveedores() {
   const cargar = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/proveedores`);
-      const json = await res.json();
+      const json = await apiFetch<Proveedor[]>('/api/proveedores');
       setProveedores(json.data ?? []);
     } finally {
       setCargando(false);
@@ -123,8 +122,7 @@ export default function Proveedores() {
 
     setCargandoDetalle(id);
     try {
-      const res = await fetch(`${API_URL}/api/proveedores/${id}`);
-      const json = await res.json();
+      const json = await apiFetch<ProveedorDetalle>(`/api/proveedores/${id}`);
       setDetalle((prev) => ({ ...prev, [id]: json.data }));
     } finally {
       setCargandoDetalle(null);
@@ -134,11 +132,9 @@ export default function Proveedores() {
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
   const guardar = async (datos: Record<string, unknown>) => {
-    const url = editando ? `${API_URL}/api/proveedores/${editando.id}` : `${API_URL}/api/proveedores`;
+    const path = editando ? `/api/proveedores/${editando.id}` : '/api/proveedores';
     const method = editando ? 'PUT' : 'POST';
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? 'Error al guardar');
+    await apiFetch(path, { method, body: JSON.stringify(datos) });
 
     // Invalidar caché del detalle si estábamos editando
     if (editando) {
@@ -153,9 +149,8 @@ export default function Proveedores() {
     if (!desactivando) return;
     setProcesando(true);
     try {
-      await fetch(`${API_URL}/api/proveedores/${desactivando.id}`, {
+      await apiFetch(`/api/proveedores/${desactivando.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activo: false }),
       });
       await cargar();
@@ -166,9 +161,8 @@ export default function Proveedores() {
   };
 
   const activar = async (prov: Proveedor) => {
-    await fetch(`${API_URL}/api/proveedores/${prov.id}`, {
+    await apiFetch(`/api/proveedores/${prov.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activo: true }),
     });
     await cargar();

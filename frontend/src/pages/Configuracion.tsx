@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Categoria, ConfiguracionGanancia, ConfiguracionImpuesto } from '../types';
-import { API_URL } from '../services/api';
+import { apiFetch } from '../services/api';
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
 
@@ -86,8 +86,7 @@ export default function Configuracion() {
     setCargando(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/configuracion/ganancias`);
-      const json = await res.json();
+      const json = await apiFetch<ConfiguracionGanancia[]>('/api/configuracion/ganancias');
       const data: ConfiguracionGanancia[] = json.data ?? [];
       setConfigs(data);
       const nuevos: Record<Categoria, string> = { QUIOSCO: '0', LIBRERIA: '0', REGALERIA: '0' };
@@ -104,8 +103,7 @@ export default function Configuracion() {
 
   async function cargarImpuestos() {
     try {
-      const res = await fetch(`${API_URL}/api/configuracion/impuestos`);
-      const json = await res.json();
+      const json = await apiFetch<ConfiguracionImpuesto[]>('/api/configuracion/impuestos');
       const data: ConfiguracionImpuesto[] = json.data ?? [];
       setImpuestos(data);
 
@@ -132,15 +130,13 @@ export default function Configuracion() {
       const existing = impuestos.find((i) => i.tipo === 'POR_METODO_PAGO' && i.metodoPago === 'CREDITO');
       const pct = parseFloat(pctCredito) || 0;
       if (existing) {
-        await fetch(`${API_URL}/api/configuracion/impuestos/${existing.id}`, {
+        await apiFetch(`/api/configuracion/impuestos/${existing.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ porcentaje: pct, activo: true }),
         });
       } else {
-        await fetch(`${API_URL}/api/configuracion/impuestos`, {
+        await apiFetch('/api/configuracion/impuestos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nombre: 'Recargo Tarjeta de Crédito', porcentaje: pct, tipo: 'POR_METODO_PAGO', metodoPago: 'CREDITO' }),
         });
       }
@@ -161,15 +157,13 @@ export default function Configuracion() {
       const pct = parseFloat(ivaDefaults[cat].porcentaje) || 21;
       const activo = ivaDefaults[cat].activo;
       if (existing) {
-        await fetch(`${API_URL}/api/configuracion/impuestos/${existing.id}`, {
+        await apiFetch(`/api/configuracion/impuestos/${existing.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ porcentaje: pct, activo }),
         });
       } else {
-        await fetch(`${API_URL}/api/configuracion/impuestos`, {
+        await apiFetch('/api/configuracion/impuestos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nombre: `IVA ${cat}`, porcentaje: pct, tipo: 'POR_PRODUCTO', metodoPago: null }),
         });
       }
@@ -204,21 +198,15 @@ export default function Configuracion() {
     setConfirmando(null);
     setGuardando((prev) => ({ ...prev, [categoria]: true }));
     try {
-      const res = await fetch(`${API_URL}/api/configuracion/ganancias`, {
+      await apiFetch('/api/configuracion/ganancias', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoria, porcentaje: parseFloat(porcentajes[categoria]) || 0 }),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        alert(json.error ?? 'Error al guardar');
-        return;
-      }
       setExito((prev) => ({ ...prev, [categoria]: '¡Precios actualizados correctamente!' }));
       setTimeout(() => setExito((prev) => ({ ...prev, [categoria]: '' })), 3500);
       await cargarConfigs();
-    } catch {
-      alert('Error de conexión con el servidor');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error de conexión con el servidor');
     } finally {
       setGuardando((prev) => ({ ...prev, [categoria]: false }));
     }

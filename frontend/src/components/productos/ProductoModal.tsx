@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Producto, Categoria } from '../../types';
-import { API_URL } from '../../services/api';
+import { apiFetch } from '../../services/api';
 
 interface Proveedor { id: number; nombre: string }
 
@@ -102,8 +102,7 @@ export default function ProductoModal({ producto, onGuardar, onCerrar }: Props) 
 
   // Cargar proveedores para el select
   useEffect(() => {
-    fetch(`${API_URL}/api/proveedores`)
-      .then((r) => r.json())
+    apiFetch<Proveedor[]>('/api/proveedores')
       .then((json) => setProveedores(json.data ?? []))
       .catch(() => setProveedores([]));
   }, []);

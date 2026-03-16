@@ -38,6 +38,11 @@ enum TipoImpuesto {
   POR_PRODUCTO
 }
 
+enum Rol {
+  ADMIN
+  VENDEDOR
+}
+
 model Proveedor {
   id       Int        @id @default(autoincrement())
   nombre   String
@@ -131,4 +136,15 @@ model ConfiguracionImpuesto {
   actualizadoEn DateTime     @updatedAt @map("actualizado_en")
 
   @@map("configuracion_impuesto")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  rol       Rol
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  @@map("usuarios")
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Producto, ItemCarrito, Venta, MetodoPago, ConfiguracionImpuesto } from '../types';
-import { API_URL } from '../services/api';
+import { apiFetch } from '../services/api';
 
 // ── Método de pago ─────────────────────────────────────────────────────────────
 
@@ -288,8 +288,7 @@ export default function NuevaVenta() {
 
   // Cargar % recargo crédito al montar
   useEffect(() => {
-    fetch(`${API_URL}/api/configuracion/impuestos`)
-      .then((r) => r.json())
+    apiFetch<ConfiguracionImpuesto[]>('/api/configuracion/impuestos')
       .then((json) => {
         const impuestos: ConfiguracionImpuesto[] = json.data ?? [];
         const credito = impuestos.find(
@@ -325,8 +324,7 @@ export default function NuevaVenta() {
     setBuscando(true);
     timerBusqueda.current = setTimeout(async () => {
       try {
-        const res = await fetch(`${API_URL}/api/productos?busqueda=${encodeURIComponent(termino)}`);
-        const json = await res.json();
+        const json = await apiFetch<Producto[]>(`/api/productos?busqueda=${encodeURIComponent(termino)}`);
         setResultados(json.data ?? []);
         setMostrarDropdown(true);
       } catch {
@@ -393,24 +391,18 @@ export default function NuevaVenta() {
     setErrorServidor(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/ventas`, {
+      const json = await apiFetch<Venta>('/api/ventas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: carrito.map((i) => ({ productoId: i.producto.id, cantidad: i.cantidad })),
           metodoPago,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        setErrorServidor(json.error ?? 'Error al procesar la venta');
-        return;
-      }
       setMostrarResumen(false);
       setVentaExitosa(json.data);
       setCarrito([]);
-    } catch {
-      setErrorServidor('No se pudo conectar con el servidor. Verificá que el backend esté corriendo.');
+    } catch (err) {
+      setErrorServidor(err instanceof Error ? err.message : 'No se pudo conectar con el servidor.');
     } finally {
       setConfirmando(false);
     }

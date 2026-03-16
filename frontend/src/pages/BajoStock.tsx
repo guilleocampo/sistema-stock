@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Categoria } from '../types';
-import { API_URL } from '../services/api';
+import { apiFetch } from '../services/api';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -263,8 +263,7 @@ export default function BajoStock() {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/productos/bajo-stock`);
-      const json = await res.json();
+      const json = await apiFetch<ProductoBajoStock[]>('/api/productos/bajo-stock');
       setProductos(json.data ?? []);
     } finally {
       setCargando(false);
@@ -274,13 +273,10 @@ export default function BajoStock() {
   useEffect(() => { cargar(); }, [cargar]);
 
   const registrarEntrada = async (productoId: number, cantidad: number, motivo: MotivoEntrada) => {
-    const res = await fetch(`${API_URL}/api/movimientos`, {
+    await apiFetch('/api/movimientos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productoId, tipo: 'ENTRADA', motivo, cantidad }),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? 'Error al registrar');
 
     setModalProducto(null);
     setExitoId(productoId);

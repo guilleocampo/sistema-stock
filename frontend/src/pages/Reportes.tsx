@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Periodo, ResumenReporte, ProductoSinMovimiento, Categoria, HistorialPaginado, Venta, MetodoPago } from '../types';
-import { API_URL } from '../services/api';
+import { apiFetch } from '../services/api';
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
 
@@ -268,41 +268,42 @@ export default function Reportes() {
   const [paginaHistorial, setPaginaHistorial] = useState(1);
 
   // ── URL helpers ────────────────────────────────────────────────────────────
-  function buildResumenUrl(): string {
+  function buildResumenPath(): string {
     if (usandoRangoManual) {
-      return `${API_URL}/api/reportes/resumen?desde=${desdeManual}&hasta=${hastaManual}`;
+      return `/api/reportes/resumen?desde=${desdeManual}&hasta=${hastaManual}`;
     }
-    return `${API_URL}/api/reportes/resumen?periodo=${periodo}`;
+    return `/api/reportes/resumen?periodo=${periodo}`;
   }
 
-  function buildHistorialUrl(pagina: number): string {
+  function buildHistorialPath(pagina: number): string {
     const params = new URLSearchParams({ pagina: String(pagina) });
     if (usandoRangoManual) {
       params.set('desde', desdeManual);
       params.set('hasta', hastaManual);
     } else {
-      // Usar mismas fechas que el resumen
       if (resumen) {
         params.set('desde', resumen.desde.slice(0, 10));
         params.set('hasta', resumen.hasta.slice(0, 10));
       }
     }
-    return `${API_URL}/api/ventas/historial?${params.toString()}`;
+    return `/api/ventas/historial?${params.toString()}`;
   }
 
   // ── Carga de resumen ───────────────────────────────────────────────────────
-  const cargarResumen = useCallback(async (url: string) => {
+  const cargarResumen = useCallback(async (path: string) => {
     setCargando(true);
     setError(null);
     try {
-      const [resRes, sinMov] = await Promise.all([
-        fetch(url),
-        fetch(`${API_URL}/api/reportes/productos-sin-movimiento?dias=30`),
+      const [resJson, sinMovJson] = await Promise.all([
+        apiFetch<ResumenReporte>(path),
+        apiFetch<ProductoSinMovimiento[]>('/api/reportes/productos-sin-movimiento?dias=30'),
       ]);
-      const [resJson, sinMovJson] = await Promise.all([resRes.json(), sinMov.json()]);
+      console.log('[Reportes] resumen:', resJson.data);
+      console.log('[Reportes] sin movimiento:', sinMovJson.data);
       setResumen(resJson.data);
       setSinMovimiento(sinMovJson.data ?? []);
-    } catch {
+    } catch (err) {
+      console.error('[Reportes] error al cargar resumen:', err);
       setError('No se pudo cargar el reporte. Verificá que el backend esté corriendo.');
     } finally {
       setCargando(false);
@@ -310,14 +311,14 @@ export default function Reportes() {
   }, []);
 
   // ── Carga de historial ─────────────────────────────────────────────────────
-  const cargarHistorial = useCallback(async (url: string) => {
+  const cargarHistorial = useCallback(async (path: string) => {
     setCargandoHistorial(true);
     try {
-      const res = await fetch(url);
-      const json = await res.json();
+      const json = await apiFetch<HistorialPaginado>(path);
+      console.log('[Reportes] historial:', json.data);
       setHistorial(json.data);
-    } catch {
-      // silencioso — el error principal ya se muestra arriba
+    } catch (err) {
+      console.error('[Reportes] error al cargar historial:', err);
     } finally {
       setCargandoHistorial(false);
     }
@@ -325,11 +326,7 @@ export default function Reportes() {
 
   // ── Efectos ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (usandoRangoManual) {
-      cargarResumen(buildResumenUrl());
-    } else {
-      cargarResumen(`${API_URL}/api/reportes/resumen?periodo=${periodo}`);
-    }
+    cargarResumen(buildResumenPath());
     setPaginaHistorial(1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodo, usandoRangoManual ? desdeManual : null, usandoRangoManual ? hastaManual : null]);
@@ -337,7 +334,7 @@ export default function Reportes() {
   // Cuando cambia el resumen o la página, recargar historial
   useEffect(() => {
     if (!resumen) return;
-    cargarHistorial(buildHistorialUrl(paginaHistorial));
+    cargarHistorial(buildHistorialPath(paginaHistorial));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumen, paginaHistorial]);
 

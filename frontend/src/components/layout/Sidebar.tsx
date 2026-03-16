@@ -1,4 +1,5 @@
 import { useBajoStock } from '../../hooks/useBajoStock';
+import { useAuth } from '../../context/AuthContext';
 
 export type Pagina = 'nueva-venta' | 'productos' | 'proveedores' | 'reportes' | 'bajo-stock' | 'configuracion';
 
@@ -11,6 +12,7 @@ interface NavItem {
   id: Pagina;
   label: string;
   icon: React.ReactNode;
+  soloAdmin?: boolean;
 }
 
 function IconVenta() {
@@ -76,17 +78,36 @@ function IconLogo() {
   );
 }
 
+function IconLogout() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  );
+}
+
 const NAV_ITEMS: NavItem[] = [
   { id: 'nueva-venta',   label: 'Nueva Venta',   icon: <IconVenta /> },
-  { id: 'productos',     label: 'Productos',      icon: <IconProducto /> },
-  { id: 'proveedores',   label: 'Proveedores',    icon: <IconProveedor /> },
-  { id: 'reportes',      label: 'Reportes',       icon: <IconReporte /> },
-  { id: 'bajo-stock',    label: 'Bajo Stock',     icon: <IconAlerta /> },
-  { id: 'configuracion', label: 'Configuración',  icon: <IconConfiguracion /> },
+  { id: 'productos',     label: 'Productos',      icon: <IconProducto />,    soloAdmin: true },
+  { id: 'proveedores',   label: 'Proveedores',    icon: <IconProveedor />,   soloAdmin: true },
+  { id: 'reportes',      label: 'Reportes',       icon: <IconReporte />,     soloAdmin: true },
+  { id: 'bajo-stock',    label: 'Bajo Stock',     icon: <IconAlerta />,      soloAdmin: true },
+  { id: 'configuracion', label: 'Configuración',  icon: <IconConfiguracion />, soloAdmin: true },
 ];
+
+const ROL_LABEL: Record<string, string> = {
+  ADMIN: 'Administrador',
+  VENDEDOR: 'Vendedor',
+};
 
 export default function Sidebar({ paginaActual, onNavegar }: Props) {
   const cantidadBajoStock = useBajoStock();
+  const { usuario, logout } = useAuth();
+  const esAdmin = usuario?.rol === 'ADMIN';
+
+  const itemsVisibles = NAV_ITEMS.filter((item) => !item.soloAdmin || esAdmin);
 
   return (
     <aside
@@ -147,7 +168,7 @@ export default function Sidebar({ paginaActual, onNavegar }: Props) {
 
       {/* Navegación */}
       <nav style={{ flex: 1, padding: '0 12px' }}>
-        {NAV_ITEMS.map((item) => {
+        {itemsVisibles.map((item) => {
           const activo = paginaActual === item.id;
           const esBajoStock = item.id === 'bajo-stock';
 
@@ -189,7 +210,6 @@ export default function Sidebar({ paginaActual, onNavegar }: Props) {
               <span style={{ opacity: activo ? 1 : 0.7, flexShrink: 0 }}>{item.icon}</span>
               <span style={{ flex: 1 }}>{item.label}</span>
 
-              {/* Badge de bajo stock */}
               {esBajoStock && cantidadBajoStock > 0 && (
                 <span
                   style={{
@@ -214,18 +234,100 @@ export default function Sidebar({ paginaActual, onNavegar }: Props) {
         })}
       </nav>
 
-      {/* Footer del sidebar */}
+      {/* Usuario logueado + cerrar sesión */}
       <div
         style={{
-          padding: '16px 20px',
+          padding: '12px 16px',
           borderTop: '1px solid var(--sidebar-border)',
-          color: '#374151',
-          fontSize: 11,
-          textAlign: 'center',
-          letterSpacing: '0.03em',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
         }}
       >
-        Polirubro · v1.0
+        {/* Info del usuario */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '8px 10px',
+            borderRadius: 8,
+            background: 'rgba(0,0,0,0.15)',
+          }}
+        >
+          <div
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: '50%',
+              background: 'var(--green)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 700,
+              flexShrink: 0,
+              textTransform: 'uppercase',
+            }}
+          >
+            {usuario?.username?.[0] ?? '?'}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                color: 'var(--text-sidebar-header)',
+                fontSize: 13,
+                fontWeight: 600,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {usuario?.username}
+            </div>
+            <div style={{ color: 'var(--text-sidebar)', fontSize: 11 }}>
+              {ROL_LABEL[usuario?.rol ?? ''] ?? usuario?.rol}
+            </div>
+          </div>
+        </div>
+
+        {/* Botón cerrar sesión */}
+        <button
+          onClick={logout}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 7,
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid rgba(239,68,68,0.25)',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            fontSize: 13,
+            fontWeight: 500,
+            color: '#f87171',
+            background: 'transparent',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.5)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'transparent';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.25)';
+          }}
+        >
+          <IconLogout />
+          Cerrar sesión
+        </button>
+
+        <div style={{ color: '#374151', fontSize: 10, textAlign: 'center', letterSpacing: '0.03em' }}>
+          Polirubro · v1.0
+        </div>
       </div>
     </aside>
   );

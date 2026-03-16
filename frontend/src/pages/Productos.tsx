@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Producto, Categoria } from '../types';
-import { API_URL } from '../services/api';
+import { apiFetch } from '../services/api';
 import ProductoModal from '../components/productos/ProductoModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 
@@ -84,8 +84,7 @@ export default function Productos() {
     setCargando(true);
     setErrorCarga(null);
     try {
-      const res = await fetch(`${API_URL}/api/productos`);
-      const json = await res.json();
+      const json = await apiFetch<Producto[]>('/api/productos');
       setProductos(json.data ?? []);
     } catch {
       setErrorCarga('No se pudo cargar la lista de productos. Verificá que el backend esté corriendo.');
@@ -138,18 +137,15 @@ export default function Productos() {
   };
 
   const guardarProducto = async (datos: Record<string, unknown>) => {
-    const url = productoEditando
-      ? `${API_URL}/api/productos/${productoEditando.id}`
-      : `${API_URL}/api/productos`;
+    const path = productoEditando
+      ? `/api/productos/${productoEditando.id}`
+      : '/api/productos';
     const method = productoEditando ? 'PUT' : 'POST';
 
-    const res = await fetch(url, {
+    await apiFetch(path, {
       method,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? 'Error al guardar el producto');
 
     await cargarProductos();
     cerrarModal();
@@ -159,7 +155,7 @@ export default function Productos() {
     if (!productoDesactivando) return;
     setDesactivando(true);
     try {
-      await fetch(`${API_URL}/api/productos/${productoDesactivando.id}`, { method: 'DELETE' });
+      await apiFetch(`/api/productos/${productoDesactivando.id}`, { method: 'DELETE' });
       await cargarProductos();
       setProductoDesactivando(null);
     } catch {
