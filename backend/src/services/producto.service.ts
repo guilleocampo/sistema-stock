@@ -3,8 +3,8 @@ import prisma from '../lib/prisma';
 
 // ── SKU generation ─────────────────────────────────────────────────────────────
 
-async function generarSKU(): Promise<string> {
-  const ultimo = await prisma.producto.findFirst({
+async function generarSKU(tx: Prisma.TransactionClient): Promise<string> {
+  const ultimo = await tx.producto.findFirst({
     where: { sku: { startsWith: 'SKU-' } },
     orderBy: { sku: 'desc' },
     select: { sku: true },
@@ -107,22 +107,24 @@ export async function crearProducto(datos: DatosCrearProducto) {
     if (errorStock) throw new Error(errorStock);
   }
 
-  const sku = await generarSKU();
+  return prisma.$transaction(async (tx) => {
+    const sku = await generarSKU(tx);
 
-  return prisma.producto.create({
-    data: {
-      sku,
-      nombre: datos.nombre,
-      categoria: datos.categoria,
-      precioCompra: new Prisma.Decimal(datos.precioCompra),
-      precioVenta: new Prisma.Decimal(datos.precioVenta),
-      stockActual: datos.stockActual ?? 0,
-      stockMinimo: datos.stockMinimo ?? 5,
-      proveedorId: datos.proveedorId ?? null,
-      tieneIva: datos.tieneIva ?? false,
-      porcentajeIva: new Prisma.Decimal(datos.porcentajeIva ?? 21.0),
-    },
-    include: { proveedor: { select: { id: true, nombre: true } } },
+    return tx.producto.create({
+      data: {
+        sku,
+        nombre: datos.nombre,
+        categoria: datos.categoria,
+        precioCompra: new Prisma.Decimal(datos.precioCompra),
+        precioVenta: new Prisma.Decimal(datos.precioVenta),
+        stockActual: datos.stockActual ?? 0,
+        stockMinimo: datos.stockMinimo ?? 5,
+        proveedorId: datos.proveedorId ?? null,
+        tieneIva: datos.tieneIva ?? false,
+        porcentajeIva: new Prisma.Decimal(datos.porcentajeIva ?? 21.0),
+      },
+      include: { proveedor: { select: { id: true, nombre: true } } },
+    });
   });
 }
 

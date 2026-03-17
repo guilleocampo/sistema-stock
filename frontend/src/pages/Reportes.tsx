@@ -43,10 +43,6 @@ function formatPrecio(valor: number) {
   return valor.toLocaleString('es-AR', { minimumFractionDigits: 2 });
 }
 
-function formatFechaCorta(iso: string) {
-  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
@@ -434,8 +430,8 @@ export default function Reportes() {
       {resumen && !cargando && (
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 20, marginTop: -16 }}>
           {usandoRangoManual
-            ? `Rango personalizado: ${formatFechaCorta(resumen.desde)} — ${formatFechaCorta(resumen.hasta)}`
-            : `${formatFechaCorta(resumen.desde)} — ${formatFechaCorta(resumen.hasta)}`
+            ? `Rango personalizado: ${formatFecha(resumen.desde)} — ${formatFecha(resumen.hasta)}`
+            : `${formatFecha(resumen.desde)} — ${formatFecha(resumen.hasta)}`
           }
         </div>
       )}
@@ -893,7 +889,7 @@ export default function Reportes() {
                         )}
                       </div>
                       <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-secondary)' }}>
-                        {p.ultimaVenta ? formatFechaCorta(p.ultimaVenta) : '—'}
+                        {p.ultimaVenta ? formatFecha(p.ultimaVenta) : '—'}
                       </div>
                     </div>
                   );

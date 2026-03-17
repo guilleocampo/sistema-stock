@@ -20,10 +20,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = 'auth_token';
 const USUARIO_KEY = 'auth_usuario';
 
-function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
 function getStoredUsuario(): UsuarioAuth | null {
   const raw = localStorage.getItem(USUARIO_KEY);
   if (!raw) return null;
@@ -34,9 +30,28 @@ function getStoredUsuario(): UsuarioAuth | null {
   }
 }
 
+function initAuthState(): { token: string | null; usuario: UsuarioAuth | null } {
+  const stored = localStorage.getItem(TOKEN_KEY);
+  if (!stored) return { token: null, usuario: null };
+  try {
+    const payload = JSON.parse(atob(stored.split('.')[1]));
+    if (payload.exp && payload.exp < Date.now() / 1000) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USUARIO_KEY);
+      return { token: null, usuario: null };
+    }
+  } catch {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USUARIO_KEY);
+    return { token: null, usuario: null };
+  }
+  return { token: stored, usuario: getStoredUsuario() };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(getStoredToken);
-  const [usuario, setUsuario] = useState<UsuarioAuth | null>(getStoredUsuario);
+  const estadoInicial = initAuthState();
+  const [token, setToken] = useState<string | null>(estadoInicial.token);
+  const [usuario, setUsuario] = useState<UsuarioAuth | null>(estadoInicial.usuario);
 
   const login = useCallback((newToken: string, newUsuario: UsuarioAuth) => {
     localStorage.setItem(TOKEN_KEY, newToken);
