@@ -298,12 +298,9 @@ export default function Reportes() {
         apiFetch<ResumenReporte>(path),
         apiFetch<ProductoSinMovimiento[]>('/api/reportes/productos-sin-movimiento?dias=30'),
       ]);
-      console.log('[Reportes] resumen:', resJson.data);
-      console.log('[Reportes] sin movimiento:', sinMovJson.data);
       setResumen(resJson.data);
       setSinMovimiento(sinMovJson.data ?? []);
     } catch (err) {
-      console.error('[Reportes] error al cargar resumen:', err);
       setError('No se pudo cargar el reporte. Verificá que el backend esté corriendo.');
     } finally {
       setCargando(false);
@@ -315,7 +312,6 @@ export default function Reportes() {
     setCargandoHistorial(true);
     try {
       const json = await apiFetch<HistorialPaginado>(path);
-      console.log('[Reportes] historial:', json.data);
       setHistorial(json.data);
     } catch (err) {
       console.error('[Reportes] error al cargar historial:', err);

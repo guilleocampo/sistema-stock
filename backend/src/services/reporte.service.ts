@@ -78,6 +78,7 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
   const itemsDelPeriodo = await prisma.itemVenta.findMany({
     where: { venta: { fechaHora: filtroFecha } },
     select: {
+      ventaId: true,
       cantidad: true,
       subtotal: true,
       precioUnitario: true,
@@ -96,10 +97,7 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
       categoria: cat,
       unidadesVendidas: itemsCat.reduce((acc, i) => acc + i.cantidad, 0),
       montoTotal: itemsCat.reduce((acc, i) => acc + Number(i.subtotal), 0),
-      cantidadTransacciones: new Set(
-        // aproximado: contar productos únicos vendidos por categoría
-        itemsCat.map((i) => i.cantidad)
-      ).size,
+      cantidadTransacciones: new Set(itemsCat.map((i) => i.ventaId)).size,
     };
   });
 

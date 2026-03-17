@@ -18,9 +18,6 @@ declare global {
 export function verificarToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
-  // DEBUG: verificar qué llega en el header (remover cuando se confirme que funciona)
-  console.log('[auth] Authorization header:', authHeader ?? '(vacío)');
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ data: null, error: 'Token no proporcionado', message: 'No autorizado' });
   }
