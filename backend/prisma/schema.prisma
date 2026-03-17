@@ -75,6 +75,7 @@ model Producto {
   itemsVenta    ItemVenta[]
   movimientos   MovimientoStock[]
 
+  @@index([categoria])
   @@map("productos")
 }
 
@@ -88,6 +89,7 @@ model Venta {
   metodoPago             MetodoPago  @map("metodo_pago")
   items                  ItemVenta[]
 
+  @@index([fechaHora])
   @@map("ventas")
 }
 

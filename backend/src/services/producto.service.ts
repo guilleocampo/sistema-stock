@@ -197,12 +197,19 @@ export async function bajaLogicaProducto(id: number) {
 }
 
 export async function listarProductosBajoStock() {
-  const productos = await prisma.producto.findMany({
-    where: { activo: true },
+  // Filtra stock_actual <= stock_minimo directamente en SQL (Prisma no soporta comparación entre columnas)
+  const raw = await prisma.$queryRaw<Array<{ id: number }>>`
+    SELECT id FROM productos
+    WHERE activo = 1
+    AND stock_actual <= stock_minimo
+  `;
+
+  const ids = raw.map((r) => r.id);
+  if (ids.length === 0) return [];
+
+  return prisma.producto.findMany({
+    where: { id: { in: ids } },
     include: { proveedor: { select: { id: true, nombre: true } } },
     orderBy: { stockActual: 'asc' },
   });
-
-  // Prisma no soporta comparación entre columnas (stockActual <= stockMinimo)
-  return productos.filter((p) => p.stockActual <= p.stockMinimo);
 }

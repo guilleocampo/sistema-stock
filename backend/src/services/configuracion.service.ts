@@ -51,23 +51,22 @@ export async function actualizarGanancia(categoria: Categoria, porcentaje: numbe
     select: { id: true, precioCompra: true },
   });
 
-  // 3. Recalcular precio_venta y registrar movimiento por cada producto
-  for (const producto of productos) {
-    const precioCompra = Number(producto.precioCompra);
-    const nuevoPrecioVenta = precioCompra + (precioCompra * porcentaje / 100);
+  // 3. Actualizar precio_venta de todos los productos de la categoría en una sola query SQL
+  await prisma.$executeRaw`
+    UPDATE productos
+    SET precio_venta = ROUND(precio_compra + (precio_compra * ${porcentaje} / 100), 2)
+    WHERE categoria = ${categoria} AND activo = 1
+  `;
 
-    await prisma.producto.update({
-      where: { id: producto.id },
-      data: { precioVenta: new Prisma.Decimal(nuevoPrecioVenta.toFixed(2)) },
-    });
-
-    await prisma.movimientoStock.create({
-      data: {
-        productoId: producto.id,
-        tipo: 'AJUSTE',
+  // 4. Registrar todos los movimientos de una vez
+  if (productos.length > 0) {
+    await prisma.movimientoStock.createMany({
+      data: productos.map((p) => ({
+        productoId: p.id,
+        tipo: 'AJUSTE' as const,
         cantidad: 0,
-        motivo: 'AJUSTE_MANUAL',
-      },
+        motivo: 'AJUSTE_MANUAL' as const,
+      })),
     });
   }
 

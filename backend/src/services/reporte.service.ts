@@ -58,20 +58,19 @@ export async function obtenerResumen(desde: Date, hasta: Date, periodo?: Periodo
     take: 5,
   });
 
-  // Enriquecer con info del producto
-  const topProductos = await Promise.all(
-    topProductosRaw.map(async (item) => {
-      const producto = await prisma.producto.findUnique({
-        where: { id: item.productoId },
-        select: { id: true, sku: true, nombre: true, categoria: true },
-      });
-      return {
-        producto,
-        unidadesVendidas: item._sum.cantidad ?? 0,
-        montoTotal: Number(item._sum.subtotal ?? 0),
-      };
-    })
-  );
+  // Enriquecer con info del producto (un único findMany en vez de N queries)
+  const topIds = topProductosRaw.map((item) => item.productoId);
+  const productosEncontrados = await prisma.producto.findMany({
+    where: { id: { in: topIds } },
+    select: { id: true, sku: true, nombre: true, categoria: true },
+  });
+  const productosMap = new Map(productosEncontrados.map((p) => [p.id, p]));
+
+  const topProductos = topProductosRaw.map((item) => ({
+    producto: productosMap.get(item.productoId) ?? null,
+    unidadesVendidas: item._sum.cantidad ?? 0,
+    montoTotal: Number(item._sum.subtotal ?? 0),
+  }));
 
   // ── 3. Desglose por categoría ──────────────────────────────────────────────
 
