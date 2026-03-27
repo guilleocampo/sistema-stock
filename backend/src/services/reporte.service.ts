@@ -5,24 +5,34 @@ import prisma from '../lib/prisma';
 
 export type Periodo = 'hoy' | 'semana' | 'mes' | 'anio' | 'personalizado';
 
-export function calcularRango(periodo: Exclude<Periodo, 'personalizado'>): { desde: Date; hasta: Date } {
-  const hasta = new Date();
-  hasta.setHours(23, 59, 59, 999);
+// MySQL guarda hora Argentina local via DEFAULT CURRENT_TIMESTAMP (timezone SYSTEM = Windows Argentina).
+// Prisma serializa Date como UTC al comparar. Para que los filtros coincidan con lo guardado,
+// creamos Date.UTC con los componentes de la fecha argentina → Prisma envía "YYYY-MM-DD HH:mm:ss" sin offset.
+function inicioDiaArgentina(fecha: Date): Date {
+  const str = fecha.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }); // "YYYY-MM-DD"
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+}
 
-  const desde = new Date();
-  desde.setHours(0, 0, 0, 0);
+function finDiaArgentina(fecha: Date): Date {
+  const str = fecha.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+}
+
+export function calcularRango(periodo: Exclude<Periodo, 'personalizado'>): { desde: Date; hasta: Date } {
+  const hasta = finDiaArgentina(new Date());
+  const desde = inicioDiaArgentina(new Date());
 
   if (periodo === 'semana') {
-    // Lunes de la semana actual
-    const diaSemana = desde.getDay(); // 0=Dom, 1=Lun...
+    const diaSemana = desde.getUTCDay(); // 0=Dom, 1=Lun...
     const diasDesdeElLunes = diaSemana === 0 ? 6 : diaSemana - 1;
-    desde.setDate(desde.getDate() - diasDesdeElLunes);
+    desde.setUTCDate(desde.getUTCDate() - diasDesdeElLunes);
   } else if (periodo === 'mes') {
-    desde.setDate(1);
+    desde.setUTCDate(1);
   } else if (periodo === 'anio') {
-    desde.setMonth(0, 1);
+    desde.setUTCMonth(0, 1);
   }
-  // 'hoy' ya está configurado con setHours(0,0,0,0)
 
   return { desde, hasta };
 }

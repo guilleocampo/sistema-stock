@@ -94,8 +94,13 @@ export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago)
 
     // ── Paso 3: crear registro en Venta ────────────────────────────────────────
 
+    // Argentina = UTC-3, sin horario de verano. Restamos 3h para que Prisma,
+    // al serializar como UTC, guarde la hora local argentina en el DATETIME.
+    const fechaArgentina = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
     const venta = await tx.venta.create({
       data: {
+        fechaHora: fechaArgentina,
         subtotalSinImpuestos: new Prisma.Decimal(subtotalSinImpuestos.toFixed(2)),
         impuestoIva: new Prisma.Decimal(impuestoIva.toFixed(2)),
         impuestoMetodoPago: new Prisma.Decimal(impuestoMetodoPago.toFixed(2)),
@@ -131,6 +136,7 @@ export async function registrarVenta(items: ItemInput[], metodoPago: MetodoPago)
           cantidad: linea.cantidad,
           motivo: 'VENTA',
           referenciaId: venta.id,
+          fechaHora: fechaArgentina,
         },
       });
     }

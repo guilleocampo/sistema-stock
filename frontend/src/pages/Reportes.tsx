@@ -43,8 +43,17 @@ function formatPrecio(valor: number) {
   return valor.toLocaleString('es-AR', { minimumFractionDigits: 2 });
 }
 
+function parsearFechaLocal(str: string): Date {
+  const [anio, mes, dia] = str.split('-').map(Number);
+  return new Date(anio, mes - 1, dia, 0, 0, 0);
+}
+
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatFechaLocal(str: string) {
+  return parsearFechaLocal(str).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function formatHora(iso: string) {
@@ -430,7 +439,7 @@ export default function Reportes() {
       {resumen && !cargando && (
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 20, marginTop: -16 }}>
           {usandoRangoManual
-            ? `Rango personalizado: ${formatFecha(resumen.desde)} — ${formatFecha(resumen.hasta)}`
+            ? `Rango personalizado: ${formatFechaLocal(desdeManual)} — ${formatFechaLocal(hastaManual)}`
             : `${formatFecha(resumen.desde)} — ${formatFecha(resumen.hasta)}`
           }
         </div>

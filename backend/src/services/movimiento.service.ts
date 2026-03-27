@@ -74,12 +74,15 @@ export async function registrarMovimiento(datos: DatosRegistrarMovimiento) {
       data: { stockActual: nuevoStock },
     });
 
+    const fechaArgentina = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
     return tx.movimientoStock.create({
       data: {
         productoId: datos.productoId,
         tipo: datos.tipo,
         cantidad: cantidadMovimiento,
         motivo: datos.motivo,
+        fechaHora: fechaArgentina,
       },
       include: {
         producto: { select: { id: true, sku: true, nombre: true, stockActual: true } },
